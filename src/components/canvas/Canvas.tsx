@@ -1,10 +1,10 @@
-import { useRef, forwardRef, useImperativeHandle } from 'react';
-import { Stage, Layer, Image as KonvaImage } from 'react-konva';
-import useImage from 'use-image';
-import { useProject } from '../../lib/project-context';
-import { GridLayer } from './GridLayer';
-import { BoundaryLayer } from './BoundaryLayer';
-import Konva from 'konva';
+import { useRef, forwardRef, useImperativeHandle } from "react";
+import { Stage, Layer, Image as KonvaImage } from "react-konva";
+import useImage from "use-image";
+import { useProject } from "../../lib/project-context";
+import { GridLayer } from "./GridLayer";
+import { BoundaryLayer } from "./BoundaryLayer";
+import Konva from "konva";
 
 interface CanvasProps {
   width: number;
@@ -12,7 +12,17 @@ interface CanvasProps {
   onCellClick?: (data: any) => void;
 }
 
-const URLImage = ({ src, x, y, rotation }: { src: string, x: number, y: number, rotation: number }) => {
+const URLImage = ({
+  src,
+  x,
+  y,
+  rotation,
+}: {
+  src: string;
+  x: number;
+  y: number;
+  rotation: number;
+}) => {
   const [image] = useImage(src);
   return (
     <KonvaImage
@@ -26,69 +36,119 @@ const URLImage = ({ src, x, y, rotation }: { src: string, x: number, y: number, 
   );
 };
 
-export const Canvas = forwardRef<Konva.Stage, CanvasProps>(({ width, height, onCellClick }, ref) => {
-  const { floorplanImage, northOrientation } = useProject();
-  const stageRef = useRef<Konva.Stage>(null);
+export const Canvas = forwardRef<Konva.Stage, CanvasProps>(
+  ({ width, height, onCellClick }, ref) => {
+    const {
+      floorplanImage,
+      northOrientation,
+      boundaryPoints,
+      setBoundaryPoints,
+      isEditingBoundary,
+      setIsEditingBoundary,
+    } = useProject();
+    const stageRef = useRef<Konva.Stage>(null);
 
-  useImperativeHandle(ref, () => stageRef.current!, []);
+    useImperativeHandle(ref, () => stageRef.current!, []);
 
-  const handleWheel = (e: any) => {
-    e.evt.preventDefault();
-    const stage = stageRef.current;
-    if (!stage) return;
+    const handleStageClick = (e: any) => {
+      // Only handle clicks when pen tool is active
+      if (!isEditingBoundary) return;
 
-    const scaleBy = 1.1;
-    const oldScale = stage.scaleX();
-    const pointer = stage.getPointerPosition();
+      // If polygon is already closed (3+ points), don't add more points from stage clicks
+      if (boundaryPoints.length >= 3) return;
 
-    if (!pointer) return;
+      // Only add points when clicking on the stage background (not on shapes)
+      const clickedOnBackground =
+        e.target === e.target.getStage() || e.target.getClassName() === "Image";
+      if (!clickedOnBackground) return;
 
-    const mousePointTo = {
-      x: (pointer.x - stage.x()) / oldScale,
-      y: (pointer.y - stage.y()) / oldScale,
+      const stage = stageRef.current;
+      if (!stage) return;
+
+      const pointer = stage.getPointerPosition();
+      if (!pointer) return;
+
+      const scale = stage.scaleX();
+      const stagePos = stage.position();
+
+      // Convert pointer to local coordinates
+      const x = (pointer.x - stagePos.x) / scale;
+      const y = (pointer.y - stagePos.y) / scale;
+
+      // Add new point
+      setBoundaryPoints([...boundaryPoints, { x, y }]);
     };
 
-    const newScale = e.evt.deltaY > 0 ? oldScale / scaleBy : oldScale * scaleBy;
+    const handleWheel = (e: any) => {
+      e.evt.preventDefault();
+      const stage = stageRef.current;
+      if (!stage) return;
 
-    stage.scale({ x: newScale, y: newScale });
+      const scaleBy = 1.1;
+      const oldScale = stage.scaleX();
+      const pointer = stage.getPointerPosition();
 
-    const newPos = {
-      x: pointer.x - mousePointTo.x * newScale,
-      y: pointer.y - mousePointTo.y * newScale,
+      if (!pointer) return;
+
+      const mousePointTo = {
+        x: (pointer.x - stage.x()) / oldScale,
+        y: (pointer.y - stage.y()) / oldScale,
+      };
+
+      const newScale =
+        e.evt.deltaY > 0 ? oldScale / scaleBy : oldScale * scaleBy;
+
+      stage.scale({ x: newScale, y: newScale });
+
+      const newPos = {
+        x: pointer.x - mousePointTo.x * newScale,
+        y: pointer.y - mousePointTo.y * newScale,
+      };
+
+      stage.position(newPos);
     };
 
-    stage.position(newPos);
-  };
-
-  return (
-    <div className="bg-muted/20 w-full h-full overflow-hidden">
-      <Stage
-        width={width}
-        height={height}
-        onWheel={handleWheel}
-        draggable
-        ref={stageRef}
-        className="bg-gray-100"
-      >
-        <Layer>
-          {floorplanImage && (
-            <URLImage 
-              src={floorplanImage} 
-              x={width / 2} 
-              y={height / 2} 
-              rotation={northOrientation}
+    return (
+      <div className="bg-muted/20 w-full h-full overflow-hidden">
+        <Stage
+          width={width}
+          height={height}
+          onWheel={handleWheel}
+          onClick={handleStageClick}
+          draggable={!isEditingBoundary || boundaryPoints.length >= 3}
+          ref={stageRef}
+          className="bg-gray-100"
+          style={{
+            cursor:
+              isEditingBoundary && boundaryPoints.length < 3
+                ? "crosshair"
+                : "default",
+          }}
+        >
+          <Layer>
+            {floorplanImage && (
+              <URLImage
+                src={floorplanImage}
+                x={width / 2}
+                y={height / 2}
+                rotation={northOrientation}
+              />
+            )}
+          </Layer>
+          <Layer>
+            <GridLayer
+              width={width}
+              height={height}
+              onCellClick={onCellClick}
             />
-          )}
-        </Layer>
-        <Layer>
-          <GridLayer width={width} height={height} onCellClick={onCellClick} />
-        </Layer>
-        <Layer>
-          <BoundaryLayer />
-        </Layer>
-      </Stage>
-    </div>
-  );
-});
+          </Layer>
+          <Layer>
+            <BoundaryLayer />
+          </Layer>
+        </Stage>
+      </div>
+    );
+  }
+);
 
-Canvas.displayName = 'Canvas';
+Canvas.displayName = "Canvas";

@@ -1,8 +1,12 @@
-import { Line, Circle, Group } from 'react-konva';
-import { useProject } from '../../lib/project-context';
-import { useState, useEffect } from 'react';
+import { Line, Circle, Group } from "react-konva";
+import { useProject } from "../../lib/project-context";
+import { useState, useEffect } from "react";
 
-export function BoundaryLayer() {
+interface BoundaryLayerProps {
+  onCanvasClick?: (x: number, y: number) => void;
+}
+
+export function BoundaryLayer({ onCanvasClick }: BoundaryLayerProps = {}) {
   const { boundaryPoints, setBoundaryPoints, isEditingBoundary } = useProject();
   // Local state for smooth dragging
   const [localPoints, setLocalPoints] = useState(boundaryPoints);
@@ -33,7 +37,7 @@ export function BoundaryLayer() {
 
   const handleLineClick = (e: any) => {
     if (!isEditingBoundary) return;
-    
+
     const stage = e.target.getStage();
     const pointer = stage.getPointerPosition();
     const scale = stage.scaleX();
@@ -50,7 +54,7 @@ export function BoundaryLayer() {
     for (let i = 0; i < localPoints.length; i++) {
       const p1 = localPoints[i];
       const p2 = localPoints[(i + 1) % localPoints.length];
-      
+
       // Distance from point to line segment
       const A = x - p1.x;
       const B = y - p1.y;
@@ -60,20 +64,19 @@ export function BoundaryLayer() {
       const dot = A * C + B * D;
       const lenSq = C * C + D * D;
       let param = -1;
-      if (lenSq !== 0) // in case of 0 length line
-          param = dot / lenSq;
+      if (lenSq !== 0)
+        // in case of 0 length line
+        param = dot / lenSq;
 
       let xx, yy;
 
       if (param < 0) {
         xx = p1.x;
         yy = p1.y;
-      }
-      else if (param > 1) {
+      } else if (param > 1) {
         xx = p2.x;
         yy = p2.y;
-      }
-      else {
+      } else {
         xx = p1.x + param * C;
         yy = p1.y + param * D;
       }
@@ -101,55 +104,84 @@ export function BoundaryLayer() {
     setBoundaryPoints(newPoints); // Update global state immediately
   };
 
+  const handleFirstPointClick = (e: any) => {
+    e.cancelBubble = true;
+    // Only close polygon if we have at least 3 points and it's not already closed
+    if (localPoints.length >= 3 && !isPolygonClosed) {
+      // Polygon is now considered closed - we just need to trigger a re-render
+      // The isPolygonClosed variable will be true on next render because length >= 3
+      setBoundaryPoints([...localPoints]); // Trigger update
+    }
+  };
+
+  // If pen tool is active but no points yet, we can still render (empty)
   if (!localPoints || localPoints.length === 0) return null;
 
-  // Close the loop for rendering the line
-  const flattenedPoints = localPoints.flatMap(p => [p.x, p.y]);
-  
+  // If we only have 1 or 2 points, show them but don't close the polygon yet
+  const flattenedPoints = localPoints.flatMap((p) => [p.x, p.y]);
+  const isPolygonClosed = localPoints.length >= 3;
+
   return (
     <Group>
       {/* The Polygon Line */}
-      <Line
-        points={[...flattenedPoints, localPoints[0].x, localPoints[0].y]}
-        stroke="#ef4444" // Red-500
-        strokeWidth={2}
-        closed
-        dash={[10, 5]}
-        fill="rgba(239, 68, 68, 0.1)"
-        onClick={handleLineClick}
-        onMouseEnter={(e) => {
-          if (isEditingBoundary) {
-            const container = e.target.getStage()?.container();
-            if (container) container.style.cursor = 'crosshair';
+      {localPoints.length >= 2 && (
+        <Line
+          points={
+            isPolygonClosed
+              ? [...flattenedPoints, localPoints[0].x, localPoints[0].y]
+              : flattenedPoints
           }
-        }}
-        onMouseLeave={(e) => {
-          const container = e.target.getStage()?.container();
-          if (container) container.style.cursor = 'default';
-        }}
-      />
+          stroke="#ef4444" // Red-500
+          strokeWidth={2}
+          closed={isPolygonClosed}
+          dash={[10, 5]}
+          fill={isPolygonClosed ? "rgba(239, 68, 68, 0.1)" : undefined}
+          onClick={handleLineClick}
+          onMouseEnter={(e) => {
+            if (isEditingBoundary && isPolygonClosed) {
+              const container = e.target.getStage()?.container();
+              if (container) container.style.cursor = "crosshair";
+            }
+          }}
+          onMouseLeave={(e) => {
+            const container = e.target.getStage()?.container();
+            if (container) container.style.cursor = "default";
+          }}
+        />
+      )}
 
       {/* Editable Handles */}
-      {isEditingBoundary && localPoints.map((point, i) => (
+      {localPoints.map((point, i) => (
         <Circle
           key={i}
           x={point.x}
           y={point.y}
-          radius={6}
-          fill="white"
-          stroke="#ef4444"
+          radius={8}
+          fill={i === 0 && !isPolygonClosed ? "#22c55e" : "white"} // Green for starting point
+          stroke={i === 0 && !isPolygonClosed ? "#16a34a" : "#ef4444"}
           strokeWidth={2}
-          draggable
+          draggable={isEditingBoundary && isPolygonClosed}
           onDragMove={handleDragMove(i)}
           onDragEnd={handleDragEnd(i)}
           onDblClick={handlePointDblClick(i)}
+          onClick={i === 0 ? handleFirstPointClick : undefined}
           onMouseEnter={(e) => {
             const container = e.target.getStage()?.container();
-            if (container) container.style.cursor = 'move';
+            if (!container) return;
+            if (i === 0 && !isPolygonClosed && localPoints.length >= 3) {
+              container.style.cursor = "pointer"; // Show pointer for closing polygon
+            } else if (isPolygonClosed && isEditingBoundary) {
+              container.style.cursor = "move"; // Show move for dragging
+            } else {
+              container.style.cursor = "crosshair"; // Show crosshair for pen tool
+            }
           }}
           onMouseLeave={(e) => {
             const container = e.target.getStage()?.container();
-            if (container) container.style.cursor = 'default';
+            if (container) {
+              container.style.cursor =
+                isEditingBoundary && !isPolygonClosed ? "crosshair" : "default";
+            }
           }}
         />
       ))}
