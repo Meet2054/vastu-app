@@ -1,11 +1,11 @@
 import { ProjectProvider } from "./lib/project-context";
 import { Sidebar } from "./components/layout/Sidebar";
-import { Workspace } from "./components/layout/Workspace";
+import { Workspace, WorkspaceRef } from "./components/layout/Workspace";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useRef } from "react";
 
 function App() {
-  const workspaceRef = useRef<{ generateQuickReport: () => void }>(null);
+  const workspaceRef = useRef<WorkspaceRef>(null);
 
   return (
     <ErrorBoundary>
@@ -13,6 +13,9 @@ function App() {
         <div className="flex h-screen w-screen bg-background text-foreground overflow-hidden">
           <Sidebar
             onQuickReport={() => workspaceRef.current?.generateQuickReport()}
+            onFullReport={(options) =>
+              workspaceRef.current?.generateFullReport(options)
+            }
           />
           <main className="flex-1 flex flex-col relative">
             <header className="h-14 border-b flex items-center px-4 bg-card">

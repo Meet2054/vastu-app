@@ -4,6 +4,8 @@ import useImage from "use-image";
 import { useProject } from "../../lib/project-context";
 import { GridLayer } from "./GridLayer";
 import { BoundaryLayer } from "./BoundaryLayer";
+import { Circle32ZonesLayer } from "./Circle32ZonesLayer";
+import { generate32CircleZones } from "../../lib/vastu/circle-zones";
 import Konva from "konva";
 
 interface CanvasProps {
@@ -44,7 +46,7 @@ export const Canvas = forwardRef<Konva.Stage, CanvasProps>(
       boundaryPoints,
       setBoundaryPoints,
       isEditingBoundary,
-      setIsEditingBoundary,
+      activeGrids,
     } = useProject();
     const stageRef = useRef<Konva.Stage>(null);
 
@@ -108,6 +110,26 @@ export const Canvas = forwardRef<Konva.Stage, CanvasProps>(
       stage.position(newPos);
     };
 
+    // Generate circle zones if boundary is defined and grid32 is active
+    const circleZones =
+      boundaryPoints.length >= 3 && activeGrids.grid32
+        ? (() => {
+            const minX = Math.min(...boundaryPoints.map((p) => p.x));
+            const maxX = Math.max(...boundaryPoints.map((p) => p.x));
+            const minY = Math.min(...boundaryPoints.map((p) => p.y));
+            const maxY = Math.max(...boundaryPoints.map((p) => p.y));
+            const centerX = (minX + maxX) / 2;
+            const centerY = (minY + maxY) / 2;
+            const radius = Math.min(maxX - minX, maxY - minY) / 2;
+            return generate32CircleZones(
+              centerX,
+              centerY,
+              radius,
+              northOrientation
+            );
+          })()
+        : null;
+
     return (
       <div className="bg-muted/20 w-full h-full overflow-hidden">
         <Stage
@@ -142,6 +164,16 @@ export const Canvas = forwardRef<Konva.Stage, CanvasProps>(
               onCellClick={onCellClick}
             />
           </Layer>
+          {circleZones && (
+            <Layer>
+              <Circle32ZonesLayer
+                circleZones={circleZones}
+                showLabels={true}
+                showZoneNumbers={true}
+                opacity={0.4}
+              />
+            </Layer>
+          )}
           <Layer>
             <BoundaryLayer />
           </Layer>

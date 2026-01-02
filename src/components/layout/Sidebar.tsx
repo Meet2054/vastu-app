@@ -16,9 +16,14 @@ import { FullReportModal } from "../report/FullReportModal";
 interface SidebarProps {
   className?: string;
   onQuickReport?: () => void;
+  onFullReport?: (options: any) => void;
 }
 
-export function Sidebar({ className, onQuickReport }: SidebarProps) {
+export function Sidebar({
+  className,
+  onQuickReport,
+  onFullReport,
+}: SidebarProps) {
   const [showCompass, setShowCompass] = useState(false);
   const [showGrids, setShowGrids] = useState(false);
   const [showReportMenu, setShowReportMenu] = useState(false);
@@ -176,8 +181,7 @@ export function Sidebar({ className, onQuickReport }: SidebarProps) {
         isOpen={showFullReportModal}
         onClose={() => setShowFullReportModal(false)}
         onGenerate={(options) => {
-          console.log("Generating full report with options:", options);
-          // TODO: Implement full report generation with selected options
+          onFullReport?.(options);
         }}
       />
     </div>
