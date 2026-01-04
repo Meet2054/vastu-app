@@ -43,8 +43,8 @@ export const Vastu16DivisionBaseLayer: React.FC<
           image={referenceImage}
           x={centerX}
           y={centerY}
-          offsetX={referenceImage.width / 2}
-          offsetY={referenceImage.height / 2}
+          offsetX={radius}
+          offsetY={radius}
           width={radius * 2}
           height={radius * 2}
           opacity={opacity * 0.5}
