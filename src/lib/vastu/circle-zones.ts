@@ -5,7 +5,7 @@
  * aligned to true North. Used by multiple Vastu analysis modules.
  */
 
-import { Point, BoundingBox } from './types';
+import { Point, BoundingBox } from '../../lib/vastu/types';
 
 export interface CircleZone {
   zoneNumber: number; // 1-32

@@ -1,6 +1,5 @@
-import React from 'react';
 import { X } from 'lucide-react';
-import type { GridWedge } from '../../lib/grids/grid-math';
+import type { GridWedge } from '../../lib/vastu/grid-math';
 
 interface CellInfoPanelProps {
   data: GridWedge | null;

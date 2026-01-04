@@ -1,7 +1,13 @@
-import React from 'react';
-import { Group, Wedge, Text, Line } from 'react-konva';
-import { useProject } from '../../lib/project-context';
-import { get16ZoneWedges, get32DoorWedges, getPolygonCentroid, getPolygonBounds, getSquareGrid } from '../../lib/grids/grid-math';
+import React from "react";
+import { Group, Wedge, Text, Line } from "react-konva";
+import { useProject } from "../../lib/vastu/project-context";
+import {
+  get16ZoneWedges,
+  get32DoorWedges,
+  getPolygonCentroid,
+  getPolygonBounds,
+  getSquareGrid,
+} from "../../lib/vastu/grid-math";
 
 interface GridLayerProps {
   width: number;
@@ -10,29 +16,32 @@ interface GridLayerProps {
 }
 
 export function GridLayer({ width, height, onCellClick }: GridLayerProps) {
-  const { activeGrids, northOrientation, floorplanDimensions, boundaryPoints } = useProject();
-  
+  const { activeGrids, northOrientation, floorplanDimensions, boundaryPoints } =
+    useProject();
+
   let centerX = width / 2;
   let centerY = height / 2;
-  let radius = Math.min(width, height) / 2 * 0.9;
+  let radius = (Math.min(width, height) / 2) * 0.9;
 
   // If boundary points exist, use them for center and radius
   if (boundaryPoints && boundaryPoints.length > 2) {
     const centroid = getPolygonCentroid(boundaryPoints);
     centerX = centroid.x;
     centerY = centroid.y;
-    
+
     // Calculate radius to cover the farthest point of the boundary
     const bounds = getPolygonBounds(boundaryPoints);
     // Use diagonal of bounding box for coverage
-    const diagonal = Math.sqrt(bounds.width * bounds.width + bounds.height * bounds.height);
-    radius = diagonal / 2 * 1.2; // 20% padding
+    const diagonal = Math.sqrt(
+      bounds.width * bounds.width + bounds.height * bounds.height
+    );
+    radius = (diagonal / 2) * 1.2; // 20% padding
   } else {
     // Fallback to floorplan dimensions if no boundary
     const fpWidth = floorplanDimensions.width || width;
     const fpHeight = floorplanDimensions.height || height;
     const diagonal = Math.sqrt(fpWidth * fpWidth + fpHeight * fpHeight);
-    radius = diagonal / 2 * 1.1;
+    radius = (diagonal / 2) * 1.1;
   }
 
   const wedges16 = get16ZoneWedges(radius);
@@ -61,17 +70,25 @@ export function GridLayer({ width, height, onCellClick }: GridLayerProps) {
                   }}
                   onMouseEnter={(e) => {
                     const container = e.target.getStage()?.container();
-                    if (container) container.style.cursor = 'pointer';
+                    if (container) container.style.cursor = "pointer";
                   }}
                   onMouseLeave={(e) => {
                     const container = e.target.getStage()?.container();
-                    if (container) container.style.cursor = 'default';
+                    if (container) container.style.cursor = "default";
                   }}
                 />
                 {/* Label */}
                 <Text
-                  x={Math.cos((wedge.rotation + wedge.angle / 2) * Math.PI / 180) * wedge.labelRadius}
-                  y={Math.sin((wedge.rotation + wedge.angle / 2) * Math.PI / 180) * wedge.labelRadius}
+                  x={
+                    Math.cos(
+                      ((wedge.rotation + wedge.angle / 2) * Math.PI) / 180
+                    ) * wedge.labelRadius
+                  }
+                  y={
+                    Math.sin(
+                      ((wedge.rotation + wedge.angle / 2) * Math.PI) / 180
+                    ) * wedge.labelRadius
+                  }
                   text={wedge.name}
                   fontSize={24}
                   fontStyle="bold"
@@ -109,17 +126,27 @@ export function GridLayer({ width, height, onCellClick }: GridLayerProps) {
                   }}
                   onMouseEnter={(e) => {
                     const container = e.target.getStage()?.container();
-                    if (container) container.style.cursor = 'pointer';
+                    if (container) container.style.cursor = "pointer";
                   }}
                   onMouseLeave={(e) => {
                     const container = e.target.getStage()?.container();
-                    if (container) container.style.cursor = 'default';
+                    if (container) container.style.cursor = "default";
                   }}
                 />
                 {/* Label */}
                 <Text
-                  x={Math.cos((wedge.rotation + wedge.angle / 2) * Math.PI / 180) * (radius * 0.92)}
-                  y={Math.sin((wedge.rotation + wedge.angle / 2) * Math.PI / 180) * (radius * 0.92)}
+                  x={
+                    Math.cos(
+                      ((wedge.rotation + wedge.angle / 2) * Math.PI) / 180
+                    ) *
+                    (radius * 0.92)
+                  }
+                  y={
+                    Math.sin(
+                      ((wedge.rotation + wedge.angle / 2) * Math.PI) / 180
+                    ) *
+                    (radius * 0.92)
+                  }
                   text={wedge.name}
                   fontSize={24}
                   fontStyle="bold"
@@ -147,13 +174,20 @@ export function GridLayer({ width, height, onCellClick }: GridLayerProps) {
             } else {
               const fpWidth = floorplanDimensions.width || width;
               const fpHeight = floorplanDimensions.height || height;
-              bounds = { minX: 0, maxX: fpWidth, minY: 0, maxY: fpHeight, width: fpWidth, height: fpHeight };
+              bounds = {
+                minX: 0,
+                maxX: fpWidth,
+                minY: 0,
+                maxY: fpHeight,
+                width: fpWidth,
+                height: fpHeight,
+              };
               // Center it if using default dimensions
               if (!boundaryPoints) {
-                  bounds.minX = (width - fpWidth) / 2;
-                  bounds.maxX = bounds.minX + fpWidth;
-                  bounds.minY = (height - fpHeight) / 2;
-                  bounds.maxY = bounds.minY + fpHeight;
+                bounds.minX = (width - fpWidth) / 2;
+                bounds.maxX = bounds.minX + fpWidth;
+                bounds.minY = (height - fpHeight) / 2;
+                bounds.maxY = bounds.minY + fpHeight;
               }
             }
 

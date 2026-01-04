@@ -1,4 +1,4 @@
-import { ProjectProvider } from "./lib/project-context";
+import { ProjectProvider } from "./lib/vastu/project-context";
 import { Sidebar } from "./components/layout/Sidebar";
 import { Workspace, WorkspaceRef } from "./components/layout/Workspace";
 import { ErrorBoundary } from "./components/ErrorBoundary";

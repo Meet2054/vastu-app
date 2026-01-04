@@ -1,12 +1,8 @@
-import { Line, Circle, Group } from "react-konva";
-import { useProject } from "../../lib/project-context";
+import { Line, Circle, Group, Text } from "react-konva";
+import { useProject } from "../../lib/vastu/project-context";
 import { useState, useEffect } from "react";
 
-interface BoundaryLayerProps {
-  onCanvasClick?: (x: number, y: number) => void;
-}
-
-export function BoundaryLayer({ onCanvasClick }: BoundaryLayerProps = {}) {
+export function BoundaryLayer() {
   const { boundaryPoints, setBoundaryPoints, isEditingBoundary } = useProject();
   // Local state for smooth dragging
   const [localPoints, setLocalPoints] = useState(boundaryPoints);
@@ -150,40 +146,53 @@ export function BoundaryLayer({ onCanvasClick }: BoundaryLayerProps = {}) {
         />
       )}
 
-      {/* Editable Handles */}
+      {/* Editable Handles with Labels */}
       {localPoints.map((point, i) => (
-        <Circle
-          key={i}
-          x={point.x}
-          y={point.y}
-          radius={8}
-          fill={i === 0 && !isPolygonClosed ? "#22c55e" : "white"} // Green for starting point
-          stroke={i === 0 && !isPolygonClosed ? "#16a34a" : "#ef4444"}
-          strokeWidth={2}
-          draggable={isEditingBoundary && isPolygonClosed}
-          onDragMove={handleDragMove(i)}
-          onDragEnd={handleDragEnd(i)}
-          onDblClick={handlePointDblClick(i)}
-          onClick={i === 0 ? handleFirstPointClick : undefined}
-          onMouseEnter={(e) => {
-            const container = e.target.getStage()?.container();
-            if (!container) return;
-            if (i === 0 && !isPolygonClosed && localPoints.length >= 3) {
-              container.style.cursor = "pointer"; // Show pointer for closing polygon
-            } else if (isPolygonClosed && isEditingBoundary) {
-              container.style.cursor = "move"; // Show move for dragging
-            } else {
-              container.style.cursor = "crosshair"; // Show crosshair for pen tool
-            }
-          }}
-          onMouseLeave={(e) => {
-            const container = e.target.getStage()?.container();
-            if (container) {
-              container.style.cursor =
-                isEditingBoundary && !isPolygonClosed ? "crosshair" : "default";
-            }
-          }}
-        />
+        <Group key={i}>
+          <Circle
+            x={point.x}
+            y={point.y}
+            radius={8}
+            fill={i === 0 && !isPolygonClosed ? "#22c55e" : "white"} // Green for starting point
+            stroke={i === 0 && !isPolygonClosed ? "#16a34a" : "#ef4444"}
+            strokeWidth={2}
+            draggable={isEditingBoundary && isPolygonClosed}
+            onDragMove={handleDragMove(i)}
+            onDragEnd={handleDragEnd(i)}
+            onDblClick={handlePointDblClick(i)}
+            onClick={i === 0 ? handleFirstPointClick : undefined}
+            onMouseEnter={(e) => {
+              const container = e.target.getStage()?.container();
+              if (!container) return;
+              if (i === 0 && !isPolygonClosed && localPoints.length >= 3) {
+                container.style.cursor = "pointer"; // Show pointer for closing polygon
+              } else if (isPolygonClosed && isEditingBoundary) {
+                container.style.cursor = "move"; // Show move for dragging
+              } else {
+                container.style.cursor = "crosshair"; // Show crosshair for pen tool
+              }
+            }}
+            onMouseLeave={(e) => {
+              const container = e.target.getStage()?.container();
+              if (container) {
+                container.style.cursor =
+                  isEditingBoundary && !isPolygonClosed
+                    ? "crosshair"
+                    : "default";
+              }
+            }}
+          />
+          {/* Point Label */}
+          <Text
+            x={point.x + 12}
+            y={point.y - 8}
+            text={`A${i + 1}`}
+            fontSize={14}
+            fontStyle="bold"
+            fill="#ef4444"
+            listening={false}
+          />
+        </Group>
       ))}
     </Group>
   );

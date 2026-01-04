@@ -6,18 +6,15 @@ import {
   useImperativeHandle,
 } from "react";
 import { Upload, Loader2 } from "lucide-react";
-import { useProject } from "../../lib/project-context";
+import { useProject } from "../../lib/vastu/project-context";
 import { Canvas } from "../canvas/Canvas";
-import type { GridWedge } from "../../lib/grids/grid-math";
+import type { GridWedge } from "../../lib/vastu/grid-math";
 import Konva from "konva";
 import { createRoot } from "react-dom/client";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-import { ReportTemplate } from "../report/ReportTemplate";
+import { ReportTemplate } from "../report/QuickReportTemplate";
 import { FullReportTemplate } from "../report/FullReportTemplate";
-import {
-  generateComprehensiveAnalysis,
-} from "../../lib/full-vastu-analysis";
 
 export interface WorkspaceRef {
   generateQuickReport: () => void;
@@ -31,6 +28,8 @@ export const Workspace = forwardRef<WorkspaceRef, {}>((props, ref) => {
     projectName,
     clientName,
     boundaryPoints,
+    vastuLayers,
+    toggleVastuLayer,
   } = useProject();
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
@@ -83,7 +82,57 @@ export const Workspace = forwardRef<WorkspaceRef, {}>((props, ref) => {
 
   const getStageDataURL = () => {
     if (stageRef.current) {
-      return stageRef.current.toDataURL({ pixelRatio: 2 });
+      const stage = stageRef.current;
+
+      // Save current state
+      const originalScale = stage.scaleX();
+      const originalPosition = stage.position();
+
+      // Calculate boundary bounds
+      if (boundaryPoints.length >= 3) {
+        const xs = boundaryPoints.map((p) => p.x);
+        const ys = boundaryPoints.map((p) => p.y);
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const minY = Math.min(...ys);
+        const maxY = Math.max(...ys);
+
+        // Calculate boundary dimensions
+        const boundWidth = maxX - minX;
+        const boundHeight = maxY - minY;
+        const boundCenterX = (minX + maxX) / 2;
+        const boundCenterY = (minY + maxY) / 2;
+
+        // Calculate scale with padding (15% on each side = 30% total, so content is 70% of canvas)
+        const paddingFactor = 1.43; // 1 / 0.7 = 1.43 to make content 70% of canvas
+        const scaleX = stage.width() / (boundWidth * paddingFactor);
+        const scaleY = stage.height() / (boundHeight * paddingFactor);
+        const fitScale = Math.min(scaleX, scaleY);
+
+        // Center the boundary
+        const newX = stage.width() / 2 - boundCenterX * fitScale;
+        const newY = stage.height() / 2 - boundCenterY * fitScale;
+
+        // Apply temporary framing
+        stage.scale({ x: fitScale, y: fitScale });
+        stage.position({ x: newX, y: newY });
+        stage.batchDraw();
+      } else {
+        // No boundary, reset to default view
+        stage.scale({ x: 1, y: 1 });
+        stage.position({ x: 0, y: 0 });
+        stage.batchDraw();
+      }
+
+      // Capture the framed view
+      const dataURL = stage.toDataURL({ pixelRatio: 2 });
+
+      // Restore original state
+      stage.scale({ x: originalScale, y: originalScale });
+      stage.position(originalPosition);
+      stage.batchDraw();
+
+      return dataURL;
     }
     return null;
   };
@@ -173,31 +222,62 @@ export const Workspace = forwardRef<WorkspaceRef, {}>((props, ref) => {
         return;
       }
 
-      setReportProgress("Preparing analyses...");
+      setReportProgress("Collecting active Vastu layers...");
 
-      // Get base stage image
-      const stageDataURL = getStageDataURL();
-      if (!stageDataURL) {
-        alert("Failed to get floor plan data. Please try again.");
-        return;
-      }
-
-      setReportProgress("Running Vastu analyses...");
-
-      // Generate comprehensive Vastu analysis using all selected modules
-      const analysisResults = await generateComprehensiveAnalysis(
-        boundaryPoints,
-        options
+      // Get all active Vastu layers from the modal options instead of sidebar state
+      const activeLayerEntries = Object.entries(options).filter(
+        ([_, isActive]) => isActive
       );
 
-      if (analysisResults.length === 0) {
-        alert("Please select at least one analysis option.");
+      if (activeLayerEntries.length === 0) {
+        alert(
+          "Please select at least one Vastu layer from the report options."
+        );
         return;
       }
 
       setReportProgress(
-        `Processed ${analysisResults.length} analyses. Generating PDF...`
+        `Capturing ${activeLayerEntries.length} layer overlays...`
       );
+
+      // Capture canvas image for each active layer
+      const vastuLayerImages: { name: string; image: string }[] = [];
+
+      for (const [layerKey, _] of activeLayerEntries) {
+        // Temporarily enable this layer on the canvas
+        if (vastuLayers.hasOwnProperty(layerKey)) {
+          toggleVastuLayer(layerKey as keyof typeof vastuLayers);
+
+          // Wait a bit for the canvas to update
+          await new Promise((resolve) => setTimeout(resolve, 200));
+
+          // Get canvas with current layer visible
+          const layerImage = getStageDataURL();
+          if (layerImage) {
+            // Convert camelCase to readable name
+            const readableName = layerKey
+              .replace(/([A-Z])/g, " $1")
+              .replace(/^./, (str) => str.toUpperCase())
+              .trim();
+
+            vastuLayerImages.push({
+              name: readableName,
+              image: layerImage,
+            });
+          }
+
+          // Disable the layer after capture
+          toggleVastuLayer(layerKey as keyof typeof vastuLayers);
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+      }
+
+      if (vastuLayerImages.length === 0) {
+        alert("Failed to capture layer images. Please try again.");
+        return;
+      }
+
+      setReportProgress("Generating PDF document...");
 
       // Create temporary container
       const container = document.createElement("div");
@@ -206,7 +286,7 @@ export const Workspace = forwardRef<WorkspaceRef, {}>((props, ref) => {
       container.style.top = "0";
       document.body.appendChild(container);
 
-      // Render full report template with actual analysis results
+      // Render full report template with layer images
       const root = createRoot(container);
       const dateStr = new Date().toLocaleDateString();
 
@@ -216,8 +296,7 @@ export const Workspace = forwardRef<WorkspaceRef, {}>((props, ref) => {
             projectName={projectName}
             clientName={clientName}
             date={dateStr}
-            floorPlanImage={stageDataURL}
-            analysisResults={analysisResults}
+            vastuLayerImages={vastuLayerImages}
             ref={(el) => {
               if (el) {
                 setTimeout(resolve, 1000);
@@ -230,8 +309,6 @@ export const Workspace = forwardRef<WorkspaceRef, {}>((props, ref) => {
       // Capture with html2canvas
       const element = container.firstElementChild as HTMLElement;
       if (!element) throw new Error("Report element not found");
-
-      setReportProgress("Generating PDF document...");
 
       const canvas = await html2canvas(element, {
         scale: 2,
@@ -305,10 +382,6 @@ export const Workspace = forwardRef<WorkspaceRef, {}>((props, ref) => {
               height={dimensions.height}
               onCellClick={setSelectedCell}
             />
-            {/* <CellInfoPanel 
-              data={selectedCell} 
-              onClose={() => setSelectedCell(null)} 
-            /> */}
           </>
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-300 m-8 rounded-lg">
