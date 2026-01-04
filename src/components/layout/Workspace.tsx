@@ -21,7 +21,7 @@ export interface WorkspaceRef {
   generateFullReport: (options: any) => void;
 }
 
-export const Workspace = forwardRef<WorkspaceRef, {}>((props, ref) => {
+export const Workspace = forwardRef<WorkspaceRef, {}>((_props, ref) => {
   const {
     floorplanImage,
     setFloorplanImage,
@@ -34,7 +34,7 @@ export const Workspace = forwardRef<WorkspaceRef, {}>((props, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-  const [selectedCell, setSelectedCell] = useState<GridWedge | null>(null);
+  const [_selectedCell, setSelectedCell] = useState<GridWedge | null>(null);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [reportProgress, setReportProgress] = useState("");
 
