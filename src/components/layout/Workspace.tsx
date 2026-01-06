@@ -15,6 +15,13 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { ReportTemplate } from "../report/QuickReportTemplate";
 import { FullReportTemplate } from "../report/FullReportTemplate";
+import { save } from "@tauri-apps/plugin-dialog";
+import { writeFile } from "@tauri-apps/plugin-fs";
+
+// Helper function to check if running in Tauri context
+const isTauri = () => {
+  return typeof window !== "undefined" && "__TAURI__" in window;
+};
 
 export interface WorkspaceRef {
   generateQuickReport: () => void;
@@ -196,7 +203,34 @@ export const Workspace = forwardRef<WorkspaceRef, {}>((_props, ref) => {
       const pdfHeight = pdf.internal.pageSize.getHeight();
 
       pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`${projectName.replace(/\s+/g, "_")}_Quick_Report.pdf`);
+
+      // Check if running in Tauri or browser
+      if (isTauri()) {
+        // Use Tauri's save dialog for packaged app
+        const pdfBlob = pdf.output("blob");
+        const arrayBuffer = await pdfBlob.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+
+        const filePath = await save({
+          defaultPath: `${projectName.replace(/\s+/g, "_")}_Quick_Report.pdf`,
+          filters: [
+            {
+              name: "PDF Document",
+              extensions: ["pdf"],
+            },
+          ],
+        });
+
+        if (filePath) {
+          await writeFile(filePath, uint8Array);
+          alert(`Quick report saved successfully to: ${filePath}`);
+        } else {
+          console.log("Save dialog cancelled by user.");
+        }
+      } else {
+        // Fallback to browser download for localhost
+        pdf.save(`${projectName.replace(/\s+/g, "_")}_Quick_Report.pdf`);
+      }
 
       // Cleanup
       root.unmount();
@@ -343,7 +377,33 @@ export const Workspace = forwardRef<WorkspaceRef, {}>((_props, ref) => {
         heightLeft -= pdfHeight;
       }
 
-      pdf.save(`${projectName.replace(/\s+/g, "_")}_Full_Report.pdf`);
+      // Check if running in Tauri or browser
+      if (isTauri()) {
+        // Use Tauri's save dialog for packaged app
+        const pdfBlob = pdf.output("blob");
+        const arrayBuffer = await pdfBlob.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+
+        const filePath = await save({
+          defaultPath: `${projectName.replace(/\s+/g, "_")}_Full_Report.pdf`,
+          filters: [
+            {
+              name: "PDF Document",
+              extensions: ["pdf"],
+            },
+          ],
+        });
+
+        if (filePath) {
+          await writeFile(filePath, uint8Array);
+          alert(`Full report saved successfully to: ${filePath}`);
+        } else {
+          console.log("Save dialog cancelled by user.");
+        }
+      } else {
+        // Fallback to browser download for localhost
+        pdf.save(`${projectName.replace(/\s+/g, "_")}_Full_Report.pdf`);
+      }
 
       // Cleanup
       root.unmount();
