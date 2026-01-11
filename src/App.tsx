@@ -36,6 +36,7 @@ function VastuApp() {
             onFullReport={(options) =>
               workspaceRef.current?.generateFullReport(options)
             }
+            getThumbnail={() => workspaceRef.current?.getThumbnail()}
           />
           <main className="flex-1 flex flex-col relative">
             <header className="h-14 border-b flex items-center px-4 bg-card justify-between">

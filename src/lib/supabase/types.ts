@@ -82,22 +82,31 @@ export interface Database {
           id: string;
           user_id: string;
           name: string;
+          client_name: string;
           data: Record<string, unknown>; // jsonb
+          thumbnail: string | null;
           created_at: string;
+          updated_at: string;
         };
         Insert: {
           id?: string;
           user_id: string;
           name: string;
+          client_name: string;
           data?: Record<string, unknown>;
+          thumbnail?: string | null;
           created_at?: string;
+          updated_at?: string;
         };
         Update: {
           id?: string;
           user_id?: string;
           name?: string;
+          client_name?: string;
           data?: Record<string, unknown>;
+          thumbnail?: string | null;
           created_at?: string;
+          updated_at?: string;
         };
       };
     };

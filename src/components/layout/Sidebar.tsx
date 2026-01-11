@@ -5,8 +5,10 @@ import {
   Grid,
   Layers,
   Settings,
-  Upload,
+  Save,
+  FolderOpen,
   PenTool,
+  FilePlus,
 } from "lucide-react";
 import { Compass } from "../compass/Compass";
 import { useState } from "react";
@@ -14,17 +16,23 @@ import { useProject } from "../../lib/vastu/project-context";
 import { FullReportModal } from "../report/FullReportModal";
 import { useAuth } from "../../lib/auth/use-auth";
 import { AdminPanel } from "../admin/AdminPanel";
+import { ProjectsModal } from "../project/ProjectsModal";
+import { SaveProjectModal } from "../project/SaveProjectModal";
+import { saveProject, updateProject } from "../../lib/vastu/project-service";
+import type { SavedProject } from "../../lib/vastu/project-service";
 
 interface SidebarProps {
   className?: string;
   onQuickReport?: () => void;
-  onFullReport?: (options: any) => void;
+  onFullReport?: (options: unknown) => void;
+  getThumbnail?: () => string | undefined;
 }
 
 export function Sidebar({
   className,
   onQuickReport,
   onFullReport,
+  getThumbnail,
 }: SidebarProps) {
   const [showCompass, setShowCompass] = useState(false);
   const [showGrids, setShowGrids] = useState(false);
@@ -32,6 +40,10 @@ export function Sidebar({
   const [showReportMenu, setShowReportMenu] = useState(false);
   const [showFullReportModal, setShowFullReportModal] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [showProjectsModal, setShowProjectsModal] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+
   const {
     activeGrids,
     toggleGrid,
@@ -39,11 +51,97 @@ export function Sidebar({
     toggleVastuLayer,
     isEditingBoundary,
     setIsEditingBoundary,
+    currentProjectId,
+    loadProject,
+    resetProject,
+    setCurrentProjectId,
+    setProjectName,
+    projectName,
+    clientName,
+    floorplanImage,
+    floorplanDimensions,
+    northOrientation,
+    boundaryPoints,
   } = useProject();
+
   const { profile } = useAuth();
 
   // Check if user is admin based on role
   const isAdmin = profile?.role === "admin";
+
+  const handleSaveProject = async () => {
+    // Ask for project name if not set or if creating new project
+    if (
+      !currentProjectId ||
+      !projectName ||
+      projectName === "Untitled Project"
+    ) {
+      setShowSaveModal(true);
+      return;
+    }
+    // If project already has a name and ID, save directly
+    await performSave(projectName);
+  };
+
+  const performSave = async (finalProjectName: string) => {
+    setSaving(true);
+    try {
+      // Update the project name in context if it changed
+      if (finalProjectName !== projectName) {
+        setProjectName(finalProjectName);
+      }
+
+      const thumbnail = getThumbnail?.();
+      const projectData = {
+        projectName: finalProjectName,
+        clientName,
+        floorplanImage,
+        floorplanDimensions,
+        northOrientation,
+        activeGrids,
+        vastuLayers,
+        boundaryPoints,
+        isEditingBoundary,
+      };
+
+      let result;
+      if (currentProjectId) {
+        // Update existing project
+        result = await updateProject(currentProjectId, projectData, thumbnail);
+        if (result.success) {
+          alert("Project updated successfully!");
+        }
+      } else {
+        // Save new project
+        result = await saveProject(projectData, thumbnail);
+        if (result.success && result.projectId) {
+          setCurrentProjectId(result.projectId);
+          alert("Project saved successfully!");
+        }
+      }
+
+      if (!result.success) {
+        alert(result.error || "Failed to save project");
+      }
+    } catch (error) {
+      console.error("Save error:", error);
+      alert("Failed to save project");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleLoadProject = (project: SavedProject) => {
+    loadProject(project);
+  };
+
+  const handleNewProject = () => {
+    if (currentProjectId || floorplanImage) {
+      if (confirm("Create new project? Any unsaved changes will be lost.")) {
+        resetProject();
+      }
+    }
+  };
 
   return (
     <div
@@ -56,12 +154,41 @@ export function Sidebar({
         <CompassIcon size={24} />
       </div>
       <div className="flex-1 flex flex-col gap-2 w-full px-2">
+        {/* New Project */}
         <button
           className="p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
           title="New Project"
+          onClick={handleNewProject}
         >
-          <Upload size={20} />
+          <FilePlus size={20} />
         </button>
+
+        {/* Save Project */}
+        <button
+          className={cn(
+            "p-2 rounded-md transition-colors",
+            saving
+              ? "text-primary bg-primary/10"
+              : "hover:bg-accent text-muted-foreground hover:text-foreground"
+          )}
+          title={currentProjectId ? "Update Project" : "Save Project"}
+          onClick={handleSaveProject}
+          disabled={saving || !floorplanImage}
+        >
+          <Save size={20} className={saving ? "animate-pulse" : ""} />
+        </button>
+
+        {/* Open Projects */}
+        <button
+          className="p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+          title="Open Project"
+          onClick={() => setShowProjectsModal(true)}
+        >
+          <FolderOpen size={20} />
+        </button>
+
+        <div className="h-px bg-border my-1" />
+
         <div className="relative group">
           <button
             className="p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors w-full"
@@ -467,6 +594,21 @@ export function Sidebar({
       <AdminPanel
         isOpen={showAdminPanel}
         onClose={() => setShowAdminPanel(false)}
+      />
+
+      {/* Projects Modal */}
+      <ProjectsModal
+        isOpen={showProjectsModal}
+        onClose={() => setShowProjectsModal(false)}
+        onProjectLoad={handleLoadProject}
+      />
+
+      {/* Save Project Modal */}
+      <SaveProjectModal
+        isOpen={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        onSave={performSave}
+        initialName={projectName || "Untitled Project"}
       />
     </div>
   );

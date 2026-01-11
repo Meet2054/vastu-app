@@ -1,4 +1,4 @@
-import { useRef, forwardRef, useImperativeHandle } from "react";
+import { useRef, forwardRef, useImperativeHandle, useEffect } from "react";
 import { Stage, Layer, Image as KonvaImage } from "react-konva";
 import useImage from "use-image";
 import { useProject } from "../../lib/vastu/project-context";
@@ -56,10 +56,21 @@ export const Canvas = forwardRef<Konva.Stage, CanvasProps>(
       isEditingBoundary,
       activeGrids,
       vastuLayers,
+      currentProjectId,
     } = useProject();
     const stageRef = useRef<Konva.Stage>(null);
 
     useImperativeHandle(ref, () => stageRef.current!, []);
+
+    // Reset stage position and scale when project changes
+    useEffect(() => {
+      const stage = stageRef.current;
+      if (stage) {
+        // Reset zoom and position to default when project loads
+        stage.scale({ x: 1, y: 1 });
+        stage.position({ x: 0, y: 0 });
+      }
+    }, [currentProjectId, floorplanImage]);
 
     const handleStageClick = (e: any) => {
       // Only handle clicks when pen tool is active

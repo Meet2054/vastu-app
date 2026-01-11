@@ -26,6 +26,7 @@ const isTauri = () => {
 export interface WorkspaceRef {
   generateQuickReport: () => void;
   generateFullReport: (options: any) => void;
+  getThumbnail: () => string | undefined;
 }
 
 export const Workspace = forwardRef<WorkspaceRef, {}>((_props, ref) => {
@@ -422,9 +423,37 @@ export const Workspace = forwardRef<WorkspaceRef, {}>((_props, ref) => {
     }
   };
 
+  const getThumbnail = () => {
+    if (stageRef.current && floorplanImage) {
+      try {
+        const stage = stageRef.current;
+        const originalScale = stage.scaleX();
+        const originalPosition = stage.position();
+
+        // Reset to default view
+        stage.scale({ x: 1, y: 1 });
+        stage.position({ x: 0, y: 0 });
+
+        // Generate thumbnail
+        const dataURL = stage.toDataURL({ pixelRatio: 0.5 });
+
+        // Restore original state
+        stage.scale({ x: originalScale, y: originalScale });
+        stage.position(originalPosition);
+
+        return dataURL;
+      } catch (error) {
+        console.error("Failed to generate thumbnail:", error);
+        return undefined;
+      }
+    }
+    return undefined;
+  };
+
   useImperativeHandle(ref, () => ({
     generateQuickReport,
     generateFullReport,
+    getThumbnail,
   }));
 
   return (

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
+import type { SavedProject } from "./project-service";
 
-interface ProjectState {
+export interface ProjectState {
   projectName: string;
   clientName: string;
   floorplanImage: string | null; // Data URL
@@ -44,6 +45,7 @@ interface ProjectState {
 }
 
 interface ProjectContextType extends ProjectState {
+  currentProjectId: string | null;
   setProjectName: (name: string) => void;
   setClientName: (name: string) => void;
   setFloorplanImage: (image: string, width: number, height: number) => void;
@@ -52,11 +54,15 @@ interface ProjectContextType extends ProjectState {
   toggleVastuLayer: (layer: keyof ProjectState["vastuLayers"]) => void;
   setBoundaryPoints: (points: { x: number; y: number }[]) => void;
   setIsEditingBoundary: (isEditing: boolean) => void;
+  loadProject: (project: SavedProject) => void;
+  resetProject: () => void;
+  setCurrentProjectId: (id: string | null) => void;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 export function ProjectProvider({ children }: { children: ReactNode }) {
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const [state, setState] = useState<ProjectState>({
     projectName: "Untitled Project",
     clientName: "",
@@ -177,11 +183,77 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const setIsEditingBoundary = (isEditing: boolean) => {
     setState((prev) => ({ ...prev, isEditingBoundary: isEditing }));
   };
+  const loadProject = (project: SavedProject) => {
+    // Load all project data including floorplan dimensions
+    const projectData = {
+      ...project.data,
+      // Ensure all required fields are present
+      boundaryPoints: project.data.boundaryPoints || [],
+      isEditingBoundary: false, // Don't start editing immediately
+      // Ensure floorplan dimensions are loaded
+      floorplanDimensions: project.data.floorplanDimensions || {
+        width: 0,
+        height: 0,
+      },
+      // Ensure north orientation is loaded
+      northOrientation: project.data.northOrientation || 0,
+    };
+
+    setState(projectData);
+    setCurrentProjectId(project.id);
+  };
+
+  const resetProject = () => {
+    setState({
+      projectName: "Untitled Project",
+      clientName: "",
+      floorplanImage: null,
+      floorplanDimensions: { width: 0, height: 0 },
+      northOrientation: 0,
+      activeGrids: {
+        grid16: false,
+        grid32: false,
+        grid64: false,
+        grid81: false,
+        devta: false,
+      },
+      vastuLayers: {
+        mvastuSquareGrid: false,
+        advanceMarma: false,
+        shunyabhanti: false,
+        shubhDwar: false,
+        vpm: false,
+        shaktiChakra: false,
+        mvastuChakra: false,
+        triDoshaDevision: false,
+        triGunaDevision: false,
+        panchtattvaDevision: false,
+        menna: false,
+        devtaChinhaAadi: false,
+        circleGrid: false,
+        seharumukh: false,
+        devtaBhojanAadi: false,
+        devtaKhanj: false,
+        mahuratVichar: false,
+        dishaGandh: false,
+        nineXNineZones: false,
+        devtaBhojan: false,
+        nighathuArth: false,
+        khanjDhatu: false,
+        devtaNighath: false,
+        devtaChintha: false,
+      },
+      boundaryPoints: [],
+      isEditingBoundary: false,
+    });
+    setCurrentProjectId(null);
+  };
 
   return (
     <ProjectContext.Provider
       value={{
         ...state,
+        currentProjectId,
         setProjectName,
         setClientName,
         setFloorplanImage,
@@ -190,6 +262,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         toggleVastuLayer,
         setBoundaryPoints,
         setIsEditingBoundary,
+        loadProject,
+        resetProject,
+        setCurrentProjectId,
       }}
     >
       {children}
