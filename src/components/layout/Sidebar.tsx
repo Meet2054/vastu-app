@@ -12,6 +12,8 @@ import { Compass } from "../compass/Compass";
 import { useState } from "react";
 import { useProject } from "../../lib/vastu/project-context";
 import { FullReportModal } from "../report/FullReportModal";
+import { useAuth } from "../../lib/auth/use-auth";
+import { AdminPanel } from "../admin/AdminPanel";
 
 interface SidebarProps {
   className?: string;
@@ -29,6 +31,7 @@ export function Sidebar({
   const [showVastuLayers, setShowVastuLayers] = useState(false);
   const [showReportMenu, setShowReportMenu] = useState(false);
   const [showFullReportModal, setShowFullReportModal] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
   const {
     activeGrids,
     toggleGrid,
@@ -37,6 +40,10 @@ export function Sidebar({
     isEditingBoundary,
     setIsEditingBoundary,
   } = useProject();
+  const { profile } = useAuth();
+
+  // Check if user is admin based on role
+  const isAdmin = profile?.role === "admin";
 
   return (
     <div
@@ -158,7 +165,6 @@ export function Sidebar({
           </button>
           {showVastuLayers && (
             <div className="absolute left-full top-0 ml-2 z-50 w-64 bg-card border rounded-lg shadow-lg p-2 flex flex-col gap-1 max-h-[450px] overflow-y-auto">
-              
               {/* Modern Vastu */}
               <div className="text-xs text-muted-foreground px-2 py-1 font-medium">
                 Modern Vastu
@@ -436,14 +442,17 @@ export function Sidebar({
           )}
         </div>
       </div>
-      <div className="mt-auto">
-        <button
-          className="p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-          title="Settings"
-        >
-          <Settings size={20} />
-        </button>
-      </div>
+      {isAdmin && (
+        <div className="mt-auto">
+          <button
+            className="p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+            title="Admin Settings"
+            onClick={() => setShowAdminPanel(true)}
+          >
+            <Settings size={20} />
+          </button>
+        </div>
+      )}
 
       {/* Full Report Modal */}
       <FullReportModal
@@ -452,6 +461,12 @@ export function Sidebar({
         onGenerate={(options) => {
           onFullReport?.(options);
         }}
+      />
+
+      {/* Admin Panel */}
+      <AdminPanel
+        isOpen={showAdminPanel}
+        onClose={() => setShowAdminPanel(false)}
       />
     </div>
   );

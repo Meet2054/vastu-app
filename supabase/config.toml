@@ -97,7 +97,7 @@ port = 54324
 # Uncomment to expose additional ports for testing user applications that send emails.
 # smtp_port = 54325
 # pop3_port = 54326
-# admin_email = "admin@email.com"
+# VITE_ADMIN_EMAIL = "admin@email.com"
 # sender_name = "Admin"
 
 [storage]
@@ -217,7 +217,7 @@ otp_expiry = 3600
 # port = 587
 # user = "apikey"
 # pass = "env(SENDGRID_API_KEY)"
-# admin_email = "admin@email.com"
+# VITE_ADMIN_EMAIL = "admin@email.com"
 # sender_name = "Admin"
 
 # Uncomment to customize email template
@@ -383,11 +383,12 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 
 [functions.activate-device]
 enabled = true
-verify_jwt = true
+verify_jwt = false
 import_map = "./functions/activate-device/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
 entrypoint = "./functions/activate-device/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/activate-device/*.html" ]
+
+[functions.create-user]
+enabled = true
+verify_jwt = false
+import_map = "./functions/create-user/deno.json"
+entrypoint = "./functions/create-user/index.ts"

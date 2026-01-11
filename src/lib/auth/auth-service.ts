@@ -69,6 +69,15 @@ export async function signIn(
       };
     }
 
+    // Admin users bypass activation and device checks
+    if (profile.role === 'admin') {
+      return {
+        success: true,
+        needsActivation: false,
+        user: profile,
+      };
+    }
+
     // Check if user is activated
     if (!profile.is_active) {
       return {
