@@ -18,11 +18,11 @@ function VastuApp() {
   const { signOut, profile } = useAuth();
 
   const handleSignOut = async () => {
-    if (
-      confirm(
-        "Are you sure you want to sign out? You will need a new activation key to sign in again."
-      )
-    ) {
+    // Show confirmation dialog before any action
+    const shouldSignOut = window.confirm("Are you sure you want to sign out?");
+
+    // Only proceed if user confirmed
+    if (shouldSignOut) {
       await signOut();
     }
   };

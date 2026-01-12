@@ -34,3 +34,6 @@ dist-ssr
 # Tauri build outputs
 src-tauri/target/
 src-tauri/WixTools
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
