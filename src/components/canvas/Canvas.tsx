@@ -303,7 +303,7 @@ export const Canvas = forwardRef<Konva.Stage, CanvasProps>(
               </Layer>
             ))}
           <Layer>
-            <BoundaryLayer />
+            <BoundaryLayer canvasWidth={width} canvasHeight={height} />
           </Layer>
         </Stage>
       </div>
