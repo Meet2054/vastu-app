@@ -77,18 +77,23 @@ export function Compass() {
           W
         </span>
 
+        {/* Center dot (behind needle) */}
+        <div
+          className="absolute w-3 h-3 bg-primary rounded-full z-10"
+          style={{ top: "calc(50% - 6px)", left: "calc(50% - 6px)" }}
+        />
+
         {/* Needle */}
         <div
-          className="absolute w-1 h-16 bg-gradient-to-b from-red-500 to-transparent origin-bottom"
+          className="absolute w-0.5 bg-gradient-to-t from-red-500 to-transparent"
           style={{
-            transform: `rotate(${northOrientation}deg) translateY(-50%)`,
-            height: "50%",
-            top: "50%",
-            left: "calc(50% - 2px)",
+            transform: `rotate(${northOrientation}deg)`,
             transformOrigin: "bottom center",
+            height: "45%",
+            bottom: "50%",
+            left: "calc(50% - 0.5px)",
           }}
         />
-        <div className="w-3 h-3 bg-primary rounded-full z-10" />
       </div>
       <div className="flex items-center gap-2">
         <input

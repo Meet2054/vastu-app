@@ -569,7 +569,7 @@ export function Sidebar({
           )}
         </div>
       </div>
-      {isAdmin && (
+      {!!isAdmin && (
         <div className="mt-auto">
           <button
             className="p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"

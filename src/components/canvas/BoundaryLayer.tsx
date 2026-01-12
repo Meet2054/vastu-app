@@ -2,8 +2,21 @@ import { Line, Circle, Group, Text } from "react-konva";
 import { useProject } from "../../lib/vastu/project-context";
 import { useState, useEffect } from "react";
 
-export function BoundaryLayer() {
-  const { boundaryPoints, setBoundaryPoints, isEditingBoundary } = useProject();
+interface BoundaryLayerProps {
+  canvasWidth?: number;
+  canvasHeight?: number;
+}
+
+export function BoundaryLayer({
+  canvasWidth = 800,
+  canvasHeight = 600,
+}: BoundaryLayerProps = {}) {
+  const {
+    boundaryPoints,
+    setBoundaryPoints,
+    isEditingBoundary,
+    northOrientation,
+  } = useProject();
   // Local state for smooth dragging
   const [localPoints, setLocalPoints] = useState(boundaryPoints);
 
@@ -117,8 +130,18 @@ export function BoundaryLayer() {
   const flattenedPoints = localPoints.flatMap((p) => [p.x, p.y]);
   const isPolygonClosed = localPoints.length >= 3;
 
+  // Calculate rotation center (canvas center)
+  const centerX = canvasWidth / 2;
+  const centerY = canvasHeight / 2;
+
   return (
-    <Group>
+    <Group
+      x={centerX}
+      y={centerY}
+      rotation={northOrientation}
+      offsetX={centerX}
+      offsetY={centerY}
+    >
       {/* The Polygon Line */}
       {localPoints.length >= 2 && (
         <Line
